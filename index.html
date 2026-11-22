@@ -53,13 +53,22 @@ input[type=text], select { font: 15px var(--body); padding: 9px 10px; border: 1p
 details summary { cursor: pointer; font-weight: 600; }
 button.linkish { background: none; border: none; padding: 4px 0; color: var(--accent); font-weight: 500; text-align: left; text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.strands { display: grid; gap: 8px; }
+.strand { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.strand input[type=text] { width: 100%; }
+.strand select { max-width: 9rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.stepper { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.stepper output { text-align: center; font: 600 1.1rem var(--mono); }
 </style>
 </head>
 <body>
+
 <main>
   <header>
     <h1>Showhome Light Remote</h1>
-    <p>Colors and patterns for the Holiday Showhome rope light (controller SL94-6M), sent over Bluetooth.</p>
+    <p>Colors and effects for Holiday Showhome Bluetooth lights, sent straight from your phone.</p>
   </header>
 
   <section id="nobt" class="warnbox" hidden>
@@ -70,33 +79,57 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
   <section>
     <h2>Connection</h2>
     <div class="row">
-      <button id="connect" class="primary">Connect to light</button>
+      <button id="connect" class="primary">Connect to a light</button>
       <button id="disconnect" disabled>Disconnect</button>
     </div>
     <button id="connectAny" class="linkish">Light not listed? Show every Bluetooth device</button>
     <span class="status"><span id="dot" class="dot"></span><span id="status">Not connected. Close the ShowHome app first.</span></span>
+    <p class="note">Connect to any one strand. The others hear its commands through the light network.</p>
   </section>
 
   <section>
-    <h2>Color</h2>
+    <h2>Send to</h2>
+    <div class="chips" id="targets"></div>
+    <p class="note" id="targetNote">"All lights" reaches every strand. Groups appear once you name your strands below.</p>
+  </section>
+
+  <section>
+    <h2>Solid color</h2>
     <div class="swatches" id="swatches"></div>
-    <div class="row">
-      <input type="color" id="picker" value="#ff3300" aria-label="Pick any color">
-      <button id="sendPicker">Send this color</button>
-      <button id="off">Turn off</button>
+    <div class="stepper">
+      <button id="colPrev" aria-label="Previous color">◀</button>
+      <output id="colNum">Color 0</output>
+      <button id="colNext" aria-label="Next color">▶</button>
     </div>
-    <label for="level">Brightness <span id="levelVal" class="mono"></span>
-      <input type="range" id="level" min="10" max="255" value="255">
-    </label>
+    <p class="note">Only red, green and blue are confirmed so far. Use the arrows to step through the light's other built-in colors.</p>
   </section>
 
   <section>
-    <h2>Patterns</h2>
-    <div class="patterns" id="patterns"></div>
-    <label for="speed">Speed
-      <input type="range" id="speed" min="1" max="10" value="5">
-    </label>
-    <p class="note">Patterns run from this page, so keep it open while one is playing.</p>
+    <h2>Effects</h2>
+    <div class="stepper">
+      <button id="fxPrev" aria-label="Previous effect">◀</button>
+      <output id="fxNum">Effect 0</output>
+      <button id="fxNext" aria-label="Next effect">▶</button>
+    </div>
+    <p class="note">The light has its own built-in effects, numbered from 0. Your ShowHome app used effects 0 and 28.</p>
+  </section>
+
+  <section>
+    <h2>Brightness</h2>
+    <div class="stepper">
+      <button id="brDown" aria-label="Dimmer">−</button>
+      <output id="brNum">3</output>
+      <button id="brUp" aria-label="Brighter">+</button>
+    </div>
+    <div class="row"><button id="off">Try "off"</button></div>
+  </section>
+
+  <section>
+    <h2>Your strands</h2>
+    <div class="row">
+      <button id="find" disabled>Find strands</button>
+    </div>
+    <div class="strands" id="strands"><p class="note">Connect, then tap Find strands. Each strand that answers shows up here so you can name it and put it in a group.</p></div>
   </section>
 
   <section>
@@ -107,19 +140,10 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
           <input type="text" id="pin" inputmode="numeric" value="" placeholder="Type your light's password" autocomplete="off">
         </label>
         <span class="status"><span id="pinDot" class="dot"></span><span id="pinStatus">Checking password…</span></span>
-        <label for="style">Color command style
-          <select id="style">
-            <option value="a">A: standard CSRmesh light (73 11)</option>
-            <option value="b">B: addressed to this light (DF87)</option>
-          </select>
+        <label for="raw">Send three setting bytes (mode, number, brightness)
+          <input type="text" id="raw" class="mono" placeholder="01 01 01" autocomplete="off">
         </label>
-        <label for="raw">Send raw command (hex, before encryption)
-          <input type="text" id="raw" class="mono" placeholder="0000 7311 0000 ff ff0000" autocomplete="off">
-        </label>
-        <div class="row"><button id="sendRaw">Send raw</button><button id="clearLog">Clear log</button></div>
-        <h2>Command tests</h2>
-        <p class="note">Tap each test once, wait 3 seconds, and note any test that makes the light change, flicker or turn off.</p>
-        <div class="patterns" id="probes"></div>
+        <div class="row"><button id="sendRaw">Send</button><button id="clearLog">Clear log</button></div>
         <pre id="log" class="mono" aria-live="polite"></pre>
       </div>
     </details>
@@ -128,18 +152,18 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
 
 <script>
 (() => {
-  const SVC = 0xfef1; // short form, kept for reference
+  const SVC_FULL = '0000fef1-0000-1000-8000-00805f9b34fb';
   const CH_CONT = 'c4edc000-9daf-11e3-8003-00025b000b00';
   const CH_DONE = 'c4edc000-9daf-11e3-8004-00025b000b00';
   const SOURCE = 0x8000;
-  // A real broadcast captured from this light, used to check the password.
   const SAMPLE = '9CE36887DF9A6F87524CA1B9001827731693E88E5B68233E1A0132';
   const $ = id => document.getElementById(id);
   const subtle = crypto.subtle;
   const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join(' ');
   const unhex = s => new Uint8Array((s.replace(/[^0-9a-f]/gi, '').match(/../g) || []).map(h => parseInt(h, 16)));
-  const log = m => { const el = $('log'); el.textContent = (new Date().toLocaleTimeString() + '  ' + m + '\n' + el.textContent).slice(0, 8000); };
-  const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const log = m => { const el = $('log'); el.textContent = (new Date().toLocaleTimeString() + '  ' + m + '\n' + el.textContent).slice(0, 12000); };
+  const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const errText = e => (e && (e.message || e.name)) || String(e);
 
   // ---- CSRmesh crypto ----
   let keyCache = {};
@@ -147,17 +171,12 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     if (keyCache.pin === pin) return keyCache;
     const d = new Uint8Array(await subtle.digest('SHA-256', new Uint8Array([...new TextEncoder().encode(pin), 0, 0x4d, 0x43, 0x50])));
     const raw = d.reverse().slice(0, 16);
-    keyCache = {
-      pin, raw,
+    keyCache = { pin,
       aes: await subtle.importKey('raw', raw, { name: 'AES-CBC' }, false, ['encrypt']),
-      mac: await subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-    };
+      mac: await subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']) };
     return keyCache;
   }
-  async function aesBlock(k, block) { // AES-ECB of one block via CBC with zero IV
-    const out = await subtle.encrypt({ name: 'AES-CBC', iv: new Uint8Array(16) }, k.aes, block);
-    return new Uint8Array(out).slice(0, 16);
-  }
+  async function aesBlock(k, block) { return new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: new Uint8Array(16) }, k.aes, block)).slice(0, 16); }
   async function ofb(k, iv, data) {
     const out = new Uint8Array(data.length); let s = iv;
     for (let i = 0; i < data.length; i += 16) { s = await aesBlock(k, s); for (let j = 0; j < 16 && i + j < data.length; j++) out[i + j] = data[i + j] ^ s[j]; }
@@ -177,33 +196,35 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     p.set(seq, 0); p.set(src, 3); p.set(ct, 5); p.set(mac, 5 + ct.length); p[p.length - 1] = 0xff;
     return p;
   }
-  async function openPacket(k, pkt) { // pkt without trailing TTL/0xFF
+  async function openPacket(k, pkt) {
     if (pkt.length < 13) return null;
     const seq = pkt.slice(0, 3), src = pkt.slice(3, 5), ct = pkt.slice(5, -8), mac = pkt.slice(-8);
-    const m = await macFor(k, seq, src, ct);
-    if (hex(m) !== hex(mac)) return null;
+    if (hex(await macFor(k, seq, src, ct)) !== hex(mac)) return null;
     return { src: (src[1] << 8) | src[0], plain: await ofb(k, ivFor(seq, src), ct) };
   }
   async function checkPin() {
     const pin = $('pin').value.trim(); store.set('pin', pin);
     const r = await openPacket(await keysFor(pin), unhex(SAMPLE).slice(0, -1));
     $('pinDot').className = 'dot ' + (r ? 'on' : 'err');
-    $('pinStatus').textContent = r ? 'Password matches your light.' : 'This password does not match your light.';
+    $('pinStatus').textContent = r ? 'Password matches your lights.' : 'Type the password your lights use (it starts empty).';
     return !!r;
   }
 
+  // ---- Showhome command format (decoded from the ShowHome app) ----
+  // plaintext: dest(2, LE) 73 B0 00 ff fe B0 P1 P2 P3 00 00, where B0 = (counter << 4) | 3
+  let counter = Math.floor(Math.random() * 16);
+  const nextB = low => { counter = (counter + 1) & 15; return (counter << 4) | low; };
+  const settingCmd = (dest, p1, p2, p3) => { const b = nextB(3); return new Uint8Array([dest & 255, dest >> 8, 0x73, b, 0, 0xff, 0xfe, b, p1, p2, p3, 0, 0]); };
+  const discoverCmd = () => new Uint8Array([0, 0, 0x73, nextB(0xe), 0, 0xff, 0xff, 0, 0, 0, 0, 0, 0]);
+
   // ---- Bluetooth ----
-  let dev, chCont, chDone, seq = (Math.random() * 0xfffff | 0) + 1, busy = Promise.resolve(), rx = [];
+  let dev, chCont, chDone, seq = (Math.random() * 0xfffff | 0) + 1, busy = Promise.resolve(), rx = [], showAll = false;
   const setStatus = (t, cls) => { $('status').textContent = t; $('dot').className = 'dot ' + (cls || ''); };
-  const SVC_FULL = '0000fef1-0000-1000-8000-00805f9b34fb';
-  const errText = e => (e && (e.message || e.name)) || String(e);
-  let showAll = false;
   async function pickDevice() {
     if (showAll) return navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SVC_FULL] });
     const tries = [
       { filters: [{ services: [SVC_FULL] }], optionalServices: [SVC_FULL] },
-      { filters: [{ namePrefix: 'LA' }], optionalServices: [SVC_FULL] },
-      { acceptAllDevices: true, optionalServices: [SVC_FULL] }
+      { filters: [{ namePrefix: 'LA' }], optionalServices: [SVC_FULL] }
     ];
     let last;
     for (const opts of tries) {
@@ -218,10 +239,10 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     let step = 'choosing the light';
     try {
       dev = await pickDevice();
-      dev.addEventListener('gattserverdisconnected', () => { setStatus('Disconnected. Tap Connect to reconnect.', 'err'); $('connect').disabled = false; $('disconnect').disabled = true; });
+      dev.addEventListener('gattserverdisconnected', () => { setStatus('Disconnected. Tap Connect to reconnect.', 'err'); $('connect').disabled = false; $('disconnect').disabled = true; $('find').disabled = true; });
       step = 'connecting'; setStatus('Connecting to ' + (dev.name || 'light') + '…');
       const gatt = await dev.gatt.connect();
-      step = 'finding the light service'; setStatus('Connected, finding controls…');
+      step = 'finding the light service';
       const svc = await gatt.getPrimaryService(SVC_FULL);
       step = 'finding the light controls';
       chCont = await svc.getCharacteristic(CH_CONT);
@@ -230,10 +251,12 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
         try { await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e => onRx(new Uint8Array(e.target.value.buffer), last)); } catch (e) { log('notify off: ' + errText(e)); }
       }
       setStatus('Connected to ' + (dev.name || 'light'), 'on');
-      $('connect').disabled = true; $('disconnect').disabled = false; log('connected to ' + (dev.name || dev.id));
+      $('connect').disabled = true; $('disconnect').disabled = false; $('find').disabled = false;
+      log('connected to ' + (dev.name || dev.id));
+      if (!(await checkPin())) { $('pin').closest('details').open = true; }
     } catch (e) {
       log('connect failed while ' + step + ': ' + errText(e));
-      setStatus(e && e.name === 'NotFoundError' ? 'No light picked. Close the ShowHome and nRF Connect apps, then try again.' : 'Could not connect while ' + step + ': ' + errText(e), 'err');
+      setStatus(e && e.name === 'NotFoundError' ? 'No light picked. Close the ShowHome app, then try again.' : 'Could not connect while ' + step + ': ' + errText(e), 'err');
     }
   }
   async function onRx(chunk, last) {
@@ -241,7 +264,15 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     const pkt = new Uint8Array(rx); rx = [];
     const k = await keysFor($('pin').value.trim());
     const r = await openPacket(k, pkt.slice(0, -1)) || await openPacket(k, pkt);
-    log(r ? `from ${r.src.toString(16)}: ${hex(r.plain)}` : 'received (unreadable): ' + hex(pkt));
+    if (!r) { log('received (unreadable): ' + hex(pkt)); return; }
+    if (r.src === SOURCE) return; // our own command echoed back by the network
+    log(`from ${r.src.toString(16)}: ${hex(r.plain)}`);
+    const p = r.plain;
+    // Identity reply: .. 73 Xe 'L' 'A' x x x x id_hi id_lo
+    if (p[2] === 0x73 && (p[3] & 15) === 0xe && p[4] === 0x4c && p[5] === 0x41) {
+      const name = String.fromCharCode(p[4], p[5], p[6]) + [...p.slice(7, 12)].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+      addStrand(r.src, name);
+    }
   }
   function sendPlain(plain) {
     busy = busy.then(async () => {
@@ -257,85 +288,84 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     });
     return busy;
   }
-  function colorCmd(r, g, b, level) {
-    level = Math.max(0, Math.min(255, level));
-    const lv = ((level >> 1) - 128) & 255;
-    if ($('style').value === 'b') return new Uint8Array([0x87, 0xdf, 0x73, 0x11, 0, 0, lv, r, g, b]);
-    return new Uint8Array([0, 0, 0x73, 0x11, 0, 0, lv, r, g, b]);
-  }
-  const sendColor = (r, g, b, level = +$('level').value) => sendPlain(colorCmd(r, g, b, level));
-  const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 
-  // ---- Colors ----
-  const COLORS = [['Red', '#ff0000'], ['Green', '#00ff00'], ['Blue', '#0000ff'], ['Warm white', '#ffb060'],
-                  ['Gold', '#ffaa00'], ['Purple', '#8800ff'], ['Cyan', '#00ffcc'], ['Pink', '#ff2288']];
-  for (const [name, c] of COLORS) {
+  // ---- Strands and groups ----
+  let strands = {}; try { strands = JSON.parse(store.get('strands', '{}')) || {}; } catch { strands = {}; }
+  const saveStrands = () => store.set('strands', JSON.stringify(strands));
+  const GROUPS = ['Rope lights', 'Icicles', 'Candy canes', 'Other'];
+  function addStrand(id, name) {
+    const key = id.toString(16);
+    if (!strands[key]) { strands[key] = { name: '', code: name, group: 'Other' }; log('found strand ' + name); }
+    else strands[key].code = name;
+    saveStrands(); renderStrands();
+  }
+  function renderStrands() {
+    const box = $('strands'); const keys = Object.keys(strands);
+    if (!keys.length) { renderTargets(); return; }
+    box.textContent = '';
+    for (const key of keys) {
+      const s = strands[key];
+      const row = document.createElement('div'); row.className = 'strand';
+      const code = document.createElement('span'); code.className = 'mono'; code.textContent = key.toUpperCase();
+      const nm = document.createElement('input'); nm.type = 'text'; nm.id = 'nm-' + key; nm.placeholder = s.code || 'Name this strand'; nm.value = s.name || '';
+      nm.onchange = () => { s.name = nm.value.trim(); saveStrands(); };
+      const gr = document.createElement('select'); gr.id = 'gr-' + key; gr.setAttribute('aria-label', 'Group');
+      for (const g of GROUPS) { const o = document.createElement('option'); o.textContent = g; gr.append(o); }
+      gr.value = s.group || 'Other'; gr.onchange = () => { s.group = gr.value; saveStrands(); renderTargets(); };
+      row.append(code, nm, gr); box.append(row);
+    }
+    renderTargets();
+  }
+  let target = 'all';
+  function renderTargets() {
+    const box = $('targets'); box.textContent = '';
+    const used = [...new Set(Object.values(strands).map(s => s.group))].filter(g => g !== 'Other');
+    const opts = [['all', 'All lights'], ...used.map(g => ['g:' + g, g])];
+    if (!opts.some(o => o[0] === target)) target = 'all';
+    for (const [val, label] of opts) {
+      const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', String(val === target));
+      b.onclick = () => { target = val; renderTargets(); }; box.append(b);
+    }
+  }
+  async function sendSetting(p1, p2, p3) {
+    if (target === 'all') return sendPlain(settingCmd(0, p1, p2, p3));
+    const g = target.slice(2);
+    for (const [key, s] of Object.entries(strands)) if (s.group === g) await sendPlain(settingCmd(parseInt(key, 16), p1, p2, p3));
+  }
+
+  // ---- Controls ----
+  let bright = +store.get('bright', '3'), col = 1, fx = 0;
+  const KNOWN = { 0: ['Blue', '#1f4fff'], 1: ['Red', '#e0241b'], 2: ['Green', '#1fae3d'] };
+  for (const i of [1, 2, 0]) {
+    const [name, c] = KNOWN[i];
     const b = document.createElement('button'); b.className = 'swatch'; b.style.background = c; b.textContent = name;
-    b.onclick = () => { stopPattern(); sendColor(...hexToRgb(c)); }; $('swatches').append(b);
+    b.onclick = () => { col = i; showCol(); sendSetting(1, col, bright); }; $('swatches').append(b);
   }
-  $('sendPicker').onclick = () => { stopPattern(); sendColor(...hexToRgb($('picker').value)); };
-  $('off').onclick = () => { stopPattern(); sendColor(0, 0, 0, 0); };
-  const showLevel = () => $('levelVal').textContent = Math.round($('level').value / 2.55) + '%';
-  $('level').oninput = showLevel; showLevel();
-
-  // ---- Patterns (driven from the page) ----
-  const hsv = (h, s = 1, v = 1) => { const f = n => { const k = (n + h / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))); }; return [f(5), f(3), f(1)]; };
-  const PATTERNS = {
-    'Rainbow fade': t => hsv((t * 12) % 360),
-    'Candy cane': t => (Math.floor(t / 6) % 2 ? [255, 0, 0] : [255, 170, 110]),
-    'Red and green': t => (Math.floor(t / 6) % 2 ? [255, 0, 0] : [0, 255, 0]),
-    'Breathing': t => { const c = hexToRgb($('picker').value), v = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(t / 4)); return c.map(x => Math.round(x * v)); },
-    'Party': () => hsv(Math.random() * 360),
-    'Ocean': t => hsv(170 + 50 * Math.sin(t / 5))
-  };
-  let timer = null, tick = 0;
-  function stopPattern() { clearInterval(timer); timer = null; document.querySelectorAll('#patterns button').forEach(b => b.setAttribute('aria-pressed', 'false')); }
-  for (const name of Object.keys(PATTERNS)) {
-    const b = document.createElement('button'); b.textContent = name; b.setAttribute('aria-pressed', 'false');
-    b.onclick = () => {
-      const on = b.getAttribute('aria-pressed') === 'true'; stopPattern(); if (on) return;
-      b.setAttribute('aria-pressed', 'true'); tick = 0;
-      const run = () => { tick++; if (busy._pending) return; const c = PATTERNS[name](tick); busy._pending = true; sendColor(...c).finally(() => busy._pending = false); };
-      const ms = () => 1100 - $('speed').value * 90;
-      run(); timer = setInterval(run, ms());
-      $('speed').onchange = () => { if (timer) { clearInterval(timer); timer = setInterval(run, ms()); } };
-    };
-    $('patterns').append(b);
-  }
-
-  // ---- Candidate command formats to find what this controller accepts ----
-  const PROBES = [
-    ['1: Off (light model)', '0000 8a01 00 01'],
-    ['2: Full on (light model)', '0000 8a01 ff 02'],
-    ['3: Off, no ack', '0000 8a00 00 03'],
-    ['4: Red (73 11 broadcast)', '0000 7311 0000 ff ff0000'],
-    ['5: Red (status style)', '0000 7333 00 ff0000 0b 0201 0000'],
-    ['6: Blue (status style)', '0000 7333 00 0000ff 0b 0201 0000'],
-    ['7: Red (light RGB 8a02)', '0000 8a02 ff ff0000 04'],
-    ['8: Red (light RGB 8a03)', '0000 8a03 ff ff0000 05'],
-    ['9: Off (to DF87)', '87df 8a01 00 06'],
-    ['10: Red (status style, DF87)', '87df 7333 00 ff0000 0b 0201 0000']
-  ];
-  for (const [name, h] of PROBES) {
-    const b = document.createElement('button'); b.textContent = 'Test ' + name;
-    b.onclick = () => { stopPattern(); log('test ' + name); sendPlain(unhex(h)); };
-    $('probes').append(b);
-  }
-
-  // ---- Raw & setup ----
-  $('sendRaw').onclick = () => { const b = unhex($('raw').value); if (b.length) sendPlain(b); };
+  const showCol = () => $('colNum').textContent = (KNOWN[col] ? KNOWN[col][0] + ' · ' : '') + 'Color ' + col;
+  const showFx = () => $('fxNum').textContent = 'Effect ' + fx;
+  const showBr = () => { $('brNum').textContent = bright; store.set('bright', String(bright)); };
+  $('colPrev').onclick = () => { col = Math.max(0, col - 1); showCol(); sendSetting(1, col, bright); };
+  $('colNext').onclick = () => { col = Math.min(255, col + 1); showCol(); sendSetting(1, col, bright); };
+  $('fxPrev').onclick = () => { fx = Math.max(0, fx - 1); showFx(); sendSetting(2, fx, bright); };
+  $('fxNext').onclick = () => { fx = Math.min(255, fx + 1); showFx(); sendSetting(2, fx, bright); };
+  let lastMode = 1; const resend = () => sendSetting(lastMode, lastMode === 1 ? col : fx, bright);
+  ['colPrev', 'colNext'].forEach(id => $(id).addEventListener('click', () => lastMode = 1));
+  ['fxPrev', 'fxNext'].forEach(id => $(id).addEventListener('click', () => lastMode = 2));
+  $('swatches').addEventListener('click', () => lastMode = 1);
+  $('brDown').onclick = () => { bright = Math.max(1, bright - 1); showBr(); resend(); };
+  $('brUp').onclick = () => { bright = Math.min(255, bright + 1); showBr(); resend(); };
+  $('off').onclick = () => sendSetting(lastMode, lastMode === 1 ? col : fx, 0);
+  $('find').onclick = () => { log('looking for strands…'); sendPlain(discoverCmd()); setTimeout(() => sendPlain(discoverCmd()), 1500); };
+  $('sendRaw').onclick = () => { const b = unhex($('raw').value); if (b.length === 3) sendSetting(b[0], b[1], b[2]); else log('Type exactly three bytes, like 01 01 01'); };
   $('clearLog').onclick = () => $('log').textContent = '';
   $('pin').value = store.get('pin', '');
-  $('style').value = store.get('style', 'a');
-  $('style').onchange = () => store.set('style', $('style').value);
   $('pin').oninput = checkPin;
   $('connect').onclick = () => { showAll = false; connect(); };
   $('connectAny').onclick = () => { showAll = true; connect(); };
-  $('disconnect').onclick = () => { stopPattern(); dev?.gatt?.disconnect(); };
-  // Some iOS Bluetooth browsers add navigator.bluetooth a moment after load, so check late and never lock the button.
+  $('disconnect').onclick = () => dev?.gatt?.disconnect();
   setTimeout(() => { if (!navigator.bluetooth) $('nobt').hidden = false; }, 2000);
-  checkPin();
-  window.__csr = { keysFor, makePacket, openPacket, unhex, hex, SAMPLE };
+  showCol(); showFx(); showBr(); renderStrands(); checkPin();
+  window.__csr = { keysFor, makePacket, openPacket, settingCmd, discoverCmd, hex, unhex };
 })();
 </script>
 </body>
