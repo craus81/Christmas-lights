@@ -51,6 +51,7 @@ input[type=text], select { font: 15px var(--body); padding: 9px 10px; border: 1p
 .note { color: var(--muted); font-size: 13px; margin: 0; }
 .warnbox { border-color: var(--warn); }
 details summary { cursor: pointer; font-weight: 600; }
+button.linkish { background: none; border: none; padding: 4px 0; color: var(--accent); font-weight: 500; text-align: left; text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -72,6 +73,7 @@ details summary { cursor: pointer; font-weight: 600; }
       <button id="connect" class="primary">Connect to light</button>
       <button id="disconnect" disabled>Disconnect</button>
     </div>
+    <button id="connectAny" class="linkish">Light not listed? Show every Bluetooth device</button>
     <span class="status"><span id="dot" class="dot"></span><span id="status">Not connected. Close the ShowHome app first.</span></span>
   </section>
 
@@ -195,7 +197,9 @@ details summary { cursor: pointer; font-weight: 600; }
   const setStatus = (t, cls) => { $('status').textContent = t; $('dot').className = 'dot ' + (cls || ''); };
   const SVC_FULL = '0000fef1-0000-1000-8000-00805f9b34fb';
   const errText = e => (e && (e.message || e.name)) || String(e);
+  let showAll = false;
   async function pickDevice() {
+    if (showAll) return navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SVC_FULL] });
     const tries = [
       { filters: [{ services: [SVC_FULL] }], optionalServices: [SVC_FULL] },
       { filters: [{ namePrefix: 'LA7' }], optionalServices: [SVC_FULL] },
@@ -226,7 +230,7 @@ details summary { cursor: pointer; font-weight: 600; }
         try { await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e => onRx(new Uint8Array(e.target.value.buffer), last)); } catch (e) { log('notify off: ' + errText(e)); }
       }
       setStatus('Connected to ' + (dev.name || 'light'), 'on');
-      $('connect').disabled = true; $('disconnect').disabled = false;
+      $('connect').disabled = true; $('disconnect').disabled = false; log('connected to ' + (dev.name || dev.id));
     } catch (e) {
       log('connect failed while ' + step + ': ' + errText(e));
       setStatus(e && e.name === 'NotFoundError' ? 'No light picked. Close the ShowHome and nRF Connect apps, then try again.' : 'Could not connect while ' + step + ': ' + errText(e), 'err');
@@ -325,7 +329,8 @@ details summary { cursor: pointer; font-weight: 600; }
   $('style').value = store.get('style', 'a');
   $('style').onchange = () => store.set('style', $('style').value);
   $('pin').oninput = checkPin;
-  $('connect').onclick = connect;
+  $('connect').onclick = () => { showAll = false; connect(); };
+  $('connectAny').onclick = () => { showAll = true; connect(); };
   $('disconnect').onclick = () => { stopPattern(); dev?.gatt?.disconnect(); };
   // Some iOS Bluetooth browsers add navigator.bluetooth a moment after load, so check late and never lock the button.
   setTimeout(() => { if (!navigator.bluetooth) $('nobt').hidden = false; }, 2000);
