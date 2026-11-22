@@ -115,6 +115,9 @@ details summary { cursor: pointer; font-weight: 600; }
           <input type="text" id="raw" class="mono" placeholder="0000 7311 0000 ff ff0000" autocomplete="off">
         </label>
         <div class="row"><button id="sendRaw">Send raw</button><button id="clearLog">Clear log</button></div>
+        <h2>Command tests</h2>
+        <p class="note">Tap each test once, wait 3 seconds, and note any test that makes the light change, flicker or turn off.</p>
+        <div class="patterns" id="probes"></div>
         <pre id="log" class="mono" aria-live="polite"></pre>
       </div>
     </details>
@@ -294,6 +297,25 @@ details summary { cursor: pointer; font-weight: 600; }
       $('speed').onchange = () => { if (timer) { clearInterval(timer); timer = setInterval(run, ms()); } };
     };
     $('patterns').append(b);
+  }
+
+  // ---- Candidate command formats to find what this controller accepts ----
+  const PROBES = [
+    ['1: Off (light model)', '0000 8a01 00 01'],
+    ['2: Full on (light model)', '0000 8a01 ff 02'],
+    ['3: Off, no ack', '0000 8a00 00 03'],
+    ['4: Red (73 11 broadcast)', '0000 7311 0000 ff ff0000'],
+    ['5: Red (status style)', '0000 7333 00 ff0000 0b 0201 0000'],
+    ['6: Blue (status style)', '0000 7333 00 0000ff 0b 0201 0000'],
+    ['7: Red (light RGB 8a02)', '0000 8a02 ff ff0000 04'],
+    ['8: Red (light RGB 8a03)', '0000 8a03 ff ff0000 05'],
+    ['9: Off (to DF87)', '87df 8a01 00 06'],
+    ['10: Red (status style, DF87)', '87df 7333 00 ff0000 0b 0201 0000']
+  ];
+  for (const [name, h] of PROBES) {
+    const b = document.createElement('button'); b.textContent = 'Test ' + name;
+    b.onclick = () => { stopPattern(); log('test ' + name); sendPlain(unhex(h)); };
+    $('probes').append(b);
   }
 
   // ---- Raw & setup ----
