@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Showhome Light Remote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one narrow column of control panels, like a handheld remote. */
+:root {
+  --bg: #f3f5f2; --panel: #ffffff; --fg: #18211c; --muted: #5d6b63; --line: #dbe2dc;
+  --accent: #0f7a4f; --accent-fg: #ffffff; --warn: #b4441c; --ok: #1d7d46;
+  --display: "Fraunces", Georgia, serif; --body: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1411; --panel: #17201b; --fg: #e8efe9; --muted: #9aaba1; --line: #2a362f;
+  --accent: #3cc287; --accent-fg: #06140d; --warn: #ff8a5c; --ok: #5ad48f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1411; --panel: #17201b; --fg: #e8efe9; --muted: #9aaba1; --line: #2a362f;
+  --accent: #3cc287; --accent-fg: #06140d; --warn: #ff8a5c; --ok: #5ad48f; color-scheme: dark }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) 40px; }
+main { max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+header h1 { font: 600 1.9rem/1.1 var(--display); margin: 8px 0 4px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+h2 { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; font-weight: 600; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+button { font: 600 15px var(--body); border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: 10px 14px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.dot.on { background: var(--ok); } .dot.err { background: var(--warn); }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.swatch { aspect-ratio: 1.6; border-radius: 10px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); padding: 0; }
+.patterns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.patterns button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+label { font-weight: 500; display: grid; gap: 6px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=color] { width: 56px; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: none; padding: 2px; }
+input[type=text], select { font: 15px var(--body); padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); min-width: 0; }
+.mono { font-family: var(--mono); font-size: 12px; }
+#log { max-height: 220px; overflow: auto; background: var(--bg); border-radius: 8px; padding: 8px; margin: 0; white-space: pre-wrap; word-break: break-all; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.warnbox { border-color: var(--warn); }
+details summary { cursor: pointer; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Showhome Light Remote</h1>
+    <p>Colors and patterns for the Holiday Showhome rope light (controller SL94-6M), sent over Bluetooth.</p>
+  </header>
+
+  <section id="nobt" class="warnbox" hidden>
+    <h2>Bluetooth not available here</h2>
+    <p class="note">Open this page in the free Bluefy browser on iPhone, or in Chrome on a computer or Android. Safari can't talk to Bluetooth lights.</p>
+  </section>
+
+  <section>
+    <h2>Connection</h2>
+    <div class="row">
+      <button id="connect" class="primary">Connect to light</button>
+      <button id="disconnect" disabled>Disconnect</button>
+    </div>
+    <span class="status"><span id="dot" class="dot"></span><span id="status">Not connected. Close the ShowHome app first.</span></span>
+  </section>
+
+  <section>
+    <h2>Color</h2>
+    <div class="swatches" id="swatches"></div>
+    <div class="row">
+      <input type="color" id="picker" value="#ff3300" aria-label="Pick any color">
+      <button id="sendPicker">Send this color</button>
+      <button id="off">Turn off</button>
+    </div>
+    <label for="level">Brightness <span id="levelVal" class="mono"></span>
+      <input type="range" id="level" min="10" max="255" value="255">
+    </label>
+  </section>
+
+  <section>
+    <h2>Patterns</h2>
+    <div class="patterns" id="patterns"></div>
+    <label for="speed">Speed
+      <input type="range" id="speed" min="1" max="10" value="5">
+    </label>
+    <p class="note">Patterns run from this page, so keep it open while one is playing.</p>
+  </section>
+
+  <section>
+    <details>
+      <summary>Setup and testing</summary>
+      <div style="display:grid;gap:12px;margin-top:12px">
+        <label for="pin">Network password
+          <input type="text" id="pin" inputmode="numeric" value="" placeholder="Type your light's password" autocomplete="off">
+        </label>
+        <span class="status"><span id="pinDot" class="dot"></span><span id="pinStatus">Checking password…</span></span>
+        <label for="style">Color command style
+          <select id="style">
+            <option value="a">A: standard CSRmesh light (73 11)</option>
+            <option value="b">B: addressed to this light (DF87)</option>
+          </select>
+        </label>
+        <label for="raw">Send raw command (hex, before encryption)
+          <input type="text" id="raw" class="mono" placeholder="0000 7311 0000 ff ff0000" autocomplete="off">
+        </label>
+        <div class="row"><button id="sendRaw">Send raw</button><button id="clearLog">Clear log</button></div>
+        <pre id="log" class="mono" aria-live="polite"></pre>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+(() => {
+  const SVC = 0xfef1;
+  const CH_CONT = 'c4edc000-9daf-11e3-8003-00025b000b00';
+  const CH_DONE = 'c4edc000-9daf-11e3-8004-00025b000b00';
+  const SOURCE = 0x8000;
+  // A real broadcast captured from this light, used to check the password.
+  const SAMPLE = '9CE36887DF9A6F87524CA1B9001827731693E88E5B68233E1A0132';
+  const $ = id => document.getElementById(id);
+  const subtle = crypto.subtle;
+  const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join(' ');
+  const unhex = s => new Uint8Array((s.replace(/[^0-9a-f]/gi, '').match(/../g) || []).map(h => parseInt(h, 16)));
+  const log = m => { const el = $('log'); el.textContent = (new Date().toLocaleTimeString() + '  ' + m + '\n' + el.textContent).slice(0, 8000); };
+  const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  // ---- CSRmesh crypto ----
+  let keyCache = {};
+  async function keysFor(pin) {
+    if (keyCache.pin === pin) return keyCache;
+    const d = new Uint8Array(await subtle.digest('SHA-256', new Uint8Array([...new TextEncoder().encode(pin), 0, 0x4d, 0x43, 0x50])));
+    const raw = d.reverse().slice(0, 16);
+    keyCache = {
+      pin, raw,
+      aes: await subtle.importKey('raw', raw, { name: 'AES-CBC' }, false, ['encrypt']),
+      mac: await subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    };
+    return keyCache;
+  }
+  async function aesBlock(k, block) { // AES-ECB of one block via CBC with zero IV
+    const out = await subtle.encrypt({ name: 'AES-CBC', iv: new Uint8Array(16) }, k.aes, block);
+    return new Uint8Array(out).slice(0, 16);
+  }
+  async function ofb(k, iv, data) {
+    const out = new Uint8Array(data.length); let s = iv;
+    for (let i = 0; i < data.length; i += 16) { s = await aesBlock(k, s); for (let j = 0; j < 16 && i + j < data.length; j++) out[i + j] = data[i + j] ^ s[j]; }
+    return out;
+  }
+  const ivFor = (seq, src) => { const iv = new Uint8Array(16); iv.set(seq, 0); iv.set(src, 4); return iv; };
+  async function macFor(k, seq, src, ct) {
+    const pre = new Uint8Array(13 + ct.length); pre.set(seq, 8); pre.set(src, 11); pre.set(ct, 13);
+    return new Uint8Array(await subtle.sign('HMAC', k.mac, pre)).reverse().slice(0, 8);
+  }
+  async function makePacket(k, seqNum, plain) {
+    const seq = new Uint8Array([seqNum & 255, (seqNum >> 8) & 255, (seqNum >> 16) & 255]);
+    const src = new Uint8Array([SOURCE & 255, SOURCE >> 8]);
+    const ct = await ofb(k, ivFor(seq, src), plain);
+    const mac = await macFor(k, seq, src, ct);
+    const p = new Uint8Array(5 + ct.length + 9);
+    p.set(seq, 0); p.set(src, 3); p.set(ct, 5); p.set(mac, 5 + ct.length); p[p.length - 1] = 0xff;
+    return p;
+  }
+  async function openPacket(k, pkt) { // pkt without trailing TTL/0xFF
+    if (pkt.length < 13) return null;
+    const seq = pkt.slice(0, 3), src = pkt.slice(3, 5), ct = pkt.slice(5, -8), mac = pkt.slice(-8);
+    const m = await macFor(k, seq, src, ct);
+    if (hex(m) !== hex(mac)) return null;
+    return { src: (src[1] << 8) | src[0], plain: await ofb(k, ivFor(seq, src), ct) };
+  }
+  async function checkPin() {
+    const pin = $('pin').value.trim(); store.set('pin', pin);
+    const r = await openPacket(await keysFor(pin), unhex(SAMPLE).slice(0, -1));
+    $('pinDot').className = 'dot ' + (r ? 'on' : 'err');
+    $('pinStatus').textContent = r ? 'Password matches your light.' : 'This password does not match your light.';
+    return !!r;
+  }
+
+  // ---- Bluetooth ----
+  let dev, chCont, chDone, seq = (Math.random() * 0xfffff | 0) + 1, busy = Promise.resolve(), rx = [];
+  const setStatus = (t, cls) => { $('status').textContent = t; $('dot').className = 'dot ' + (cls || ''); };
+  async function connect() {
+    try {
+      dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }, { namePrefix: 'LA7' }], optionalServices: [SVC] });
+      dev.addEventListener('gattserverdisconnected', () => { setStatus('Disconnected. Tap Connect to reconnect.', 'err'); $('connect').disabled = false; $('disconnect').disabled = true; });
+      setStatus('Connecting to ' + (dev.name || 'light') + '…');
+      const gatt = await dev.gatt.connect();
+      const svc = await gatt.getPrimaryService(SVC);
+      chCont = await svc.getCharacteristic(CH_CONT);
+      chDone = await svc.getCharacteristic(CH_DONE);
+      for (const [ch, last] of [[chCont, false], [chDone, true]]) {
+        try { await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e => onRx(new Uint8Array(e.target.value.buffer), last)); } catch (e) { log('notify off: ' + e.message); }
+      }
+      setStatus('Connected to ' + (dev.name || 'light'), 'on');
+      $('connect').disabled = true; $('disconnect').disabled = false;
+    } catch (e) { setStatus(e.name === 'NotFoundError' ? 'No light picked. Make sure the ShowHome app is closed, then try again.' : 'Could not connect: ' + e.message, 'err'); }
+  }
+  async function onRx(chunk, last) {
+    rx.push(...chunk); if (!last) return;
+    const pkt = new Uint8Array(rx); rx = [];
+    const k = await keysFor($('pin').value.trim());
+    const r = await openPacket(k, pkt.slice(0, -1)) || await openPacket(k, pkt);
+    log(r ? `from ${r.src.toString(16)}: ${hex(r.plain)}` : 'received (unreadable): ' + hex(pkt));
+  }
+  function sendPlain(plain) {
+    busy = busy.then(async () => {
+      if (!chDone) { log('Not connected'); return; }
+      const k = await keysFor($('pin').value.trim());
+      seq = (seq + 1) & 0xffffff;
+      const p = await makePacket(k, seq, plain);
+      try {
+        if (p.length > 20) { await chCont.writeValue(p.slice(0, 20)); await chDone.writeValue(p.slice(20)); }
+        else await chDone.writeValue(p);
+        log('sent ' + hex(plain));
+      } catch (e) { log('send failed: ' + e.message); }
+    });
+    return busy;
+  }
+  function colorCmd(r, g, b, level) {
+    level = Math.max(0, Math.min(255, level));
+    const lv = ((level >> 1) - 128) & 255;
+    if ($('style').value === 'b') return new Uint8Array([0x87, 0xdf, 0x73, 0x11, 0, 0, lv, r, g, b]);
+    return new Uint8Array([0, 0, 0x73, 0x11, 0, 0, lv, r, g, b]);
+  }
+  const sendColor = (r, g, b, level = +$('level').value) => sendPlain(colorCmd(r, g, b, level));
+  const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+  // ---- Colors ----
+  const COLORS = [['Red', '#ff0000'], ['Green', '#00ff00'], ['Blue', '#0000ff'], ['Warm white', '#ffb060'],
+                  ['Gold', '#ffaa00'], ['Purple', '#8800ff'], ['Cyan', '#00ffcc'], ['Pink', '#ff2288']];
+  for (const [name, c] of COLORS) {
+    const b = document.createElement('button'); b.className = 'swatch'; b.style.background = c; b.textContent = name;
+    b.onclick = () => { stopPattern(); sendColor(...hexToRgb(c)); }; $('swatches').append(b);
+  }
+  $('sendPicker').onclick = () => { stopPattern(); sendColor(...hexToRgb($('picker').value)); };
+  $('off').onclick = () => { stopPattern(); sendColor(0, 0, 0, 0); };
+  const showLevel = () => $('levelVal').textContent = Math.round($('level').value / 2.55) + '%';
+  $('level').oninput = showLevel; showLevel();
+
+  // ---- Patterns (driven from the page) ----
+  const hsv = (h, s = 1, v = 1) => { const f = n => { const k = (n + h / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))); }; return [f(5), f(3), f(1)]; };
+  const PATTERNS = {
+    'Rainbow fade': t => hsv((t * 12) % 360),
+    'Candy cane': t => (Math.floor(t / 6) % 2 ? [255, 0, 0] : [255, 170, 110]),
+    'Red and green': t => (Math.floor(t / 6) % 2 ? [255, 0, 0] : [0, 255, 0]),
+    'Breathing': t => { const c = hexToRgb($('picker').value), v = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(t / 4)); return c.map(x => Math.round(x * v)); },
+    'Party': () => hsv(Math.random() * 360),
+    'Ocean': t => hsv(170 + 50 * Math.sin(t / 5))
+  };
+  let timer = null, tick = 0;
+  function stopPattern() { clearInterval(timer); timer = null; document.querySelectorAll('#patterns button').forEach(b => b.setAttribute('aria-pressed', 'false')); }
+  for (const name of Object.keys(PATTERNS)) {
+    const b = document.createElement('button'); b.textContent = name; b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => {
+      const on = b.getAttribute('aria-pressed') === 'true'; stopPattern(); if (on) return;
+      b.setAttribute('aria-pressed', 'true'); tick = 0;
+      const run = () => { tick++; if (busy._pending) return; const c = PATTERNS[name](tick); busy._pending = true; sendColor(...c).finally(() => busy._pending = false); };
+      const ms = () => 1100 - $('speed').value * 90;
+      run(); timer = setInterval(run, ms());
+      $('speed').onchange = () => { if (timer) { clearInterval(timer); timer = setInterval(run, ms()); } };
+    };
+    $('patterns').append(b);
+  }
+
+  // ---- Raw & setup ----
+  $('sendRaw').onclick = () => { const b = unhex($('raw').value); if (b.length) sendPlain(b); };
+  $('clearLog').onclick = () => $('log').textContent = '';
+  $('pin').value = store.get('pin', '');
+  $('style').value = store.get('style', 'a');
+  $('style').onchange = () => store.set('style', $('style').value);
+  $('pin').oninput = checkPin;
+  $('connect').onclick = connect;
+  $('disconnect').onclick = () => { stopPattern(); dev?.gatt?.disconnect(); };
+  if (!navigator.bluetooth) { $('nobt').hidden = false; $('connect').disabled = true; }
+  checkPin();
+  window.__csr = { keysFor, makePacket, openPacket, unhex, hex, SAMPLE };
+})();
+</script>
+</body>
+</html>
