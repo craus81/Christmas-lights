@@ -123,7 +123,7 @@ details summary { cursor: pointer; font-weight: 600; }
 
 <script>
 (() => {
-  const SVC = 0xfef1;
+  const SVC = 0xfef1; // short form, kept for reference
   const CH_CONT = 'c4edc000-9daf-11e3-8003-00025b000b00';
   const CH_DONE = 'c4edc000-9daf-11e3-8004-00025b000b00';
   const SOURCE = 0x8000;
@@ -190,22 +190,44 @@ details summary { cursor: pointer; font-weight: 600; }
   // ---- Bluetooth ----
   let dev, chCont, chDone, seq = (Math.random() * 0xfffff | 0) + 1, busy = Promise.resolve(), rx = [];
   const setStatus = (t, cls) => { $('status').textContent = t; $('dot').className = 'dot ' + (cls || ''); };
+  const SVC_FULL = '0000fef1-0000-1000-8000-00805f9b34fb';
+  const errText = e => (e && (e.message || e.name)) || String(e);
+  async function pickDevice() {
+    const tries = [
+      { filters: [{ services: [SVC_FULL] }], optionalServices: [SVC_FULL] },
+      { filters: [{ namePrefix: 'LA7' }], optionalServices: [SVC_FULL] },
+      { acceptAllDevices: true, optionalServices: [SVC_FULL] }
+    ];
+    let last;
+    for (const opts of tries) {
+      try { return await navigator.bluetooth.requestDevice(opts); }
+      catch (e) { last = e; log('picker: ' + errText(e)); if (e && e.name === 'NotFoundError') throw e; }
+    }
+    throw last;
+  }
   async function connect() {
     if (!navigator.bluetooth) { $('nobt').hidden = false; setStatus('This browser has no Bluetooth access. Use Bluefy.', 'err'); return; }
+    $('nobt').hidden = true;
+    let step = 'choosing the light';
     try {
-      dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }, { namePrefix: 'LA7' }], optionalServices: [SVC] });
+      dev = await pickDevice();
       dev.addEventListener('gattserverdisconnected', () => { setStatus('Disconnected. Tap Connect to reconnect.', 'err'); $('connect').disabled = false; $('disconnect').disabled = true; });
-      setStatus('Connecting to ' + (dev.name || 'light') + '…');
+      step = 'connecting'; setStatus('Connecting to ' + (dev.name || 'light') + '…');
       const gatt = await dev.gatt.connect();
-      const svc = await gatt.getPrimaryService(SVC);
+      step = 'finding the light service'; setStatus('Connected, finding controls…');
+      const svc = await gatt.getPrimaryService(SVC_FULL);
+      step = 'finding the light controls';
       chCont = await svc.getCharacteristic(CH_CONT);
       chDone = await svc.getCharacteristic(CH_DONE);
       for (const [ch, last] of [[chCont, false], [chDone, true]]) {
-        try { await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e => onRx(new Uint8Array(e.target.value.buffer), last)); } catch (e) { log('notify off: ' + e.message); }
+        try { await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e => onRx(new Uint8Array(e.target.value.buffer), last)); } catch (e) { log('notify off: ' + errText(e)); }
       }
       setStatus('Connected to ' + (dev.name || 'light'), 'on');
       $('connect').disabled = true; $('disconnect').disabled = false;
-    } catch (e) { setStatus(e.name === 'NotFoundError' ? 'No light picked. Make sure the ShowHome app is closed, then try again.' : 'Could not connect: ' + e.message, 'err'); }
+    } catch (e) {
+      log('connect failed while ' + step + ': ' + errText(e));
+      setStatus(e && e.name === 'NotFoundError' ? 'No light picked. Close the ShowHome and nRF Connect apps, then try again.' : 'Could not connect while ' + step + ': ' + errText(e), 'err');
+    }
   }
   async function onRx(chunk, last) {
     rx.push(...chunk); if (!last) return;
@@ -224,7 +246,7 @@ details summary { cursor: pointer; font-weight: 600; }
         if (p.length > 20) { await chCont.writeValue(p.slice(0, 20)); await chDone.writeValue(p.slice(20)); }
         else await chDone.writeValue(p);
         log('sent ' + hex(plain));
-      } catch (e) { log('send failed: ' + e.message); }
+      } catch (e) { log('send failed: ' + errText(e)); }
     });
     return busy;
   }
