@@ -191,6 +191,7 @@ details summary { cursor: pointer; font-weight: 600; }
   let dev, chCont, chDone, seq = (Math.random() * 0xfffff | 0) + 1, busy = Promise.resolve(), rx = [];
   const setStatus = (t, cls) => { $('status').textContent = t; $('dot').className = 'dot ' + (cls || ''); };
   async function connect() {
+    if (!navigator.bluetooth) { $('nobt').hidden = false; setStatus('This browser has no Bluetooth access. Use Bluefy.', 'err'); return; }
     try {
       dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }, { namePrefix: 'LA7' }], optionalServices: [SVC] });
       dev.addEventListener('gattserverdisconnected', () => { setStatus('Disconnected. Tap Connect to reconnect.', 'err'); $('connect').disabled = false; $('disconnect').disabled = true; });
@@ -282,7 +283,8 @@ details summary { cursor: pointer; font-weight: 600; }
   $('pin').oninput = checkPin;
   $('connect').onclick = connect;
   $('disconnect').onclick = () => { stopPattern(); dev?.gatt?.disconnect(); };
-  if (!navigator.bluetooth) { $('nobt').hidden = false; $('connect').disabled = true; }
+  // Some iOS Bluetooth browsers add navigator.bluetooth a moment after load, so check late and never lock the button.
+  setTimeout(() => { if (!navigator.bluetooth) $('nobt').hidden = false; }, 2000);
   checkPin();
   window.__csr = { keysFor, makePacket, openPacket, unhex, hex, SAMPLE };
 })();
