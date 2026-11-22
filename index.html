@@ -202,7 +202,7 @@ button.linkish { background: none; border: none; padding: 4px 0; color: var(--ac
     if (showAll) return navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SVC_FULL] });
     const tries = [
       { filters: [{ services: [SVC_FULL] }], optionalServices: [SVC_FULL] },
-      { filters: [{ namePrefix: 'LA7' }], optionalServices: [SVC_FULL] },
+      { filters: [{ namePrefix: 'LA' }], optionalServices: [SVC_FULL] },
       { acceptAllDevices: true, optionalServices: [SVC_FULL] }
     ];
     let last;
